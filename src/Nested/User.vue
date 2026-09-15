@@ -1,0 +1,309 @@
+<template>
+  <div>
+    <div class="page-heading">
+      <div>
+        <h1>Students</h1>
+        <p>Manage student information and enrollment.</p>
+      </div>
+      <button class="primary-btn" @click="openAddModal">
+        <i class="bi bi-person-plus-fill"></i> Add Student
+      </button>
+    </div>
+
+    <div class="dashboard-card">
+      <div class="card-header-custom">
+        <div>
+          <h3>Student List</h3>
+          <p>
+            All registered students • 
+            <span class="badge-total"> Total: {{ store.state.students.length }}</span>
+          </p>
+        </div>
+        <div class="search-box small-search">
+          <i class="bi bi-search"></i>
+          <input v-model="search" placeholder="Search..." />
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="custom-table">
+          <thead>
+            <tr>
+              <th style="width: 70px;">No</th> <!-- Changed from ID to No -->
+              <th>Student</th>
+              <th>Email</th>
+              <th>Class</th>
+              <th>Attendance</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="student in filteredStudents" :key="student.id">
+              <!-- Custom designed to extract just the number from ST001 format -->
+              <td class="id-number-cell">
+                {{ student.id.replace(/^[A-Za-z]+0*/, '') }}
+              </td>
+              <td>
+                <div class="student-cell">
+                  <div class="student-avatar">
+                    {{ student.name.charAt(0) }}
+                  </div>
+                  <strong>{{ student.name }}</strong>
+                </div>
+              </td>
+              <td>{{ student.email }}</td>
+              <td>{{ student.className }}</td>
+              <td>
+                <span
+                  class="attendance-status"
+                  :class="student.attendance >= 90 ? 'present-status' : 'late-status'"
+                >
+                  {{ student.attendance }}%
+                </span>
+              </td>
+              <td>
+                <div style="display: flex; gap: 5px;">
+                  <button class="icon-action edit-btn" @click="openEditModal(student)" title="Edit">
+                    <i class="bi bi-pencil-square"></i>
+                  </button>
+                  <button class="icon-action delete-btn" @click="deleteStudent(student.id)" title="Delete">
+                    <i class="bi bi-trash-fill"></i>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr v-if="filteredStudents.length === 0">
+              <td colspan="6" style="text-align: center; padding: 30px;">
+                No students found.
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Modal for Add/Edit Student -->
+    <div v-if="showModal" class="modal-overlay" @click.self="closeModal">
+      <div class="student-modal">
+        <div class="modal-header">
+          <div>
+            <h3>{{ isEditMode ? 'Edit Student' : 'Add Student' }}</h3>
+            <p>{{ isEditMode ? 'Update student information' : 'Enter student information' }}</p>
+          </div>
+          <button class="close-btn" @click="closeModal">
+            <i class="bi bi-x-lg"></i>
+          </button>
+        </div>
+
+        <form @submit.prevent="handleSubmit">
+          <div class="form-group">
+            <label>Student Name</label>
+            <input v-model="formStudent.name" type="text" placeholder="Enter student name" required />
+          </div>
+
+          <div class="form-group">
+            <label>Email</label>
+            <input v-model="formStudent.email" type="email" placeholder="Enter email" required />
+          </div>
+
+          <div class="form-group">
+            <label>Class</label>
+            <select v-model="formStudent.className" required>
+              <option value="">Select class</option>
+              <option value="Class A">Class A</option>
+              <option value="Class B">Class B</option>
+              <option value="Class C">Class C</option>
+            </select>
+          </div>
+
+          <div class="modal-actions">
+            <button type="button" class="cancel-btn" @click="closeModal">
+              Cancel
+            </button>
+            <button type="submit" class="primary-btn">
+              <i :class="isEditMode ? 'bi bi-check-lg' : 'bi bi-person-plus-fill'"></i>
+              {{ isEditMode ? 'Save Changes' : 'Add Student' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+import { useAttendanceStore } from '../Data/AttendanceStore'
+
+// Shared store — same data Attendance.vue writes to and Dashboard.vue reads from
+const store = useAttendanceStore()
+
+const search = ref('')
+const showModal = ref(false)
+const isEditMode = ref(false)
+const currentStudentId = ref('')
+
+const formStudent = ref({
+  name: '',
+  email: '',
+  className: ''
+})
+
+// Roster + live attendance % (computed from real records set on the Attendance page)
+const filteredStudents = computed(() => {
+  const keyword = search.value.toLowerCase()
+  return store.state.students
+    .filter(student =>
+      student.name.toLowerCase().includes(keyword) ||
+      student.email.toLowerCase().includes(keyword) ||
+      student.id.toLowerCase().includes(keyword) ||
+      student.className.toLowerCase().includes(keyword)
+    )
+    .map(student => ({
+      ...student,
+      attendance: store.getStudentAttendanceRate(student.id)
+    }))
+})
+
+// បើក Modal សម្រាប់ Add
+function openAddModal() {
+  isEditMode.value = false
+  formStudent.value = { name: '', email: '', className: '' }
+  showModal.value = true
+}
+
+// បើក Modal សម្រាប់ Edit និងទាញទិន្នន័យចាស់មកបង្ហាញ
+function openEditModal(student: { id: string; name: string; email: string; className: string }) {
+  currentStudentId.value = student.id
+  formStudent.value = {
+    name: student.name,
+    email: student.email,
+    className: student.className
+  }
+  isEditMode.value = true
+  showModal.value = true
+}
+
+function closeModal() {
+  showModal.value = false
+}
+
+// គ្រប់គ្រងការ Submit ទាំង Add និង Edit
+function handleSubmit() {
+  if (isEditMode.value) {
+    store.updateStudent(currentStudentId.value, { ...formStudent.value })
+  } else {
+    store.addStudent({ ...formStudent.value })
+  }
+  closeModal()
+}
+
+// បានបំពេញបន្ថែមមុខងារ Delete ដែលដាច់ឱ្យបានពេញលេញ
+function deleteStudent(id: string) {
+  if (confirm('Are you sure you want to delete this student?')) {
+    store.deleteStudent(id)
+  }
+}
+</script>
+
+<style scoped>
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+}
+.student-modal {
+  width: 450px;
+  max-width: 90%;
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 20px;
+}
+.modal-header h3 {
+  margin: 0;
+}
+.modal-header p {
+  margin: 5px 0 0;
+  color: #777;
+}
+.close-btn {
+  border: none;
+  background: transparent;
+  font-size: 18px;
+  cursor: pointer;
+}
+.form-group {
+  margin-bottom: 16px;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 7px;
+  font-weight: 600;
+}
+.form-group input,
+.form-group select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 7px;
+  outline: none;
+}
+.form-group input:focus,
+.form-group select:focus {
+  border-color: #2f8f7e;
+}
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+.cancel-btn {
+  border: 1px solid #ddd;
+  background: white;
+  padding: 9px 16px;
+  border-radius: 7px;
+  cursor: pointer;
+}
+.primary-btn {
+  cursor: pointer;
+}
+.icon-action {
+  cursor: pointer;
+  border: none;
+  background: #f1f5f9;
+  padding: 6px 10px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+.edit-btn:hover {
+  background: #e0f2fe;
+  color: #0284c7;
+}
+.delete-btn:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.badge-total {
+  background-color: #eff6ff;
+  color: #2563eb;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 12px;
+  display: inline-block;
+  margin-left: 4px;
+}
+
+</style>
