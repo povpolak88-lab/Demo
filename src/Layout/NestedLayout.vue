@@ -12,7 +12,7 @@
           <small>Management System</small>
         </div>
       </div>
-       <hr>
+      <hr>
 
       <!-- Menu -->
       <nav class="sidebar-menu">
@@ -36,12 +36,6 @@
         <router-link to="/information" class="menu-item">
           <i class="bi bi-info-circle-fill"></i>
           <span>Information</span>
-        </router-link>
-
-        <router-link to="/message" class="menu-item">
-          <i class="bi bi-chat-left-text-fill"></i>
-          <span>Messages</span>
-          <span class="message-badge">3</span>
         </router-link>
 
         <p class="menu-title">MANAGEMENT</p>
@@ -81,8 +75,6 @@
 
         <div class="header-right">
           <button class="header-icon">
-            <i class="bi bi-bell"></i>
-            <span class="notification-dot"></span>
           </button>
 
           <!-- Interactive Profile Trigger Container -->
@@ -132,7 +124,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 
-const profileImage = ref("https://scontent.fpnh5-3.fna.fbcdn.net/v/t39.30808-6/326740429_1933386307027242_4544503231498968043_n.png?stp=dst-png&cstp=mx265x265&ctp=s265x265&_nc_cat=107&_nc_map=urlgen_bucketless&ccb=1-7&_nc_sid=6ee11a&_nc_eui2=AeFqEDwPBYh4gLmEP7-Hs9jurxABM_T-NmevEAEz9P42Z528dX7hswD3z9LOlgxxTTTIkl4qrIi80esFO22uJudq&_nc_ohc=9mQnPo-dFK8Q7kNvwHX6kTn&_nc_oc=AdonI8aQf6zDVuIk8zx5Fq6vXzdVHCOa90xlfX5DyYyLosDS3sqwMcAniaHVt0_8q2w&_nc_zt=23&_nc_ht=scontent.fpnh5-3.fna&_nc_gid=rSK5_hDLKHP18hhgxBpRGg&_nc_ss=7b2a8&oh=00_AQGjph-qWn8E-dRT0oY7hg0i7w9n1CzlDQm3-80RIacyaA&oe=6A89B718")
+const profileImage = ref("https://fbcdn.net")
 
 const isDropdownOpen = ref(false)
 
@@ -145,12 +137,14 @@ function closeDropdownOutside(event) {
   const container = document.querySelector('.profile-container')
   if (container && !container.contains(event.target)) {
     isDropdownOpen.value = false
+    // លុបកូដលួចបាញ់កូដ logout ចេញពីទីនេះ ដើម្បីកុំឱ្យវាប៉ះទង្គិចពេលចុចផ្ទៃខាងក្រៅ
   }
 }
 
 function handleLogout() {
   isDropdownOpen.value = false
-  alert('Logging out of the management system...')
+  // ដំណើរការបញ្ជូនព្រឹត្តិការណ៍ Logout ទៅកាន់ App.vue តែម្តងគត់នៅពេលចុចប៊ូតុង Log Out ពិតប្រាកដ
+  window.dispatchEvent(new Event('app-logout'))
 }
 
 onMounted(() => {
@@ -280,13 +274,8 @@ onUnmounted(() => {
   transform: translateY(-4px);
   opacity: 0;
 }
-/* Container positioning */
-.profile-container {
-  position: relative;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
 
-/* Profile Trigger Card */
+/* Profile Trigger Card Style */
 .profile {
   cursor: pointer;
   display: flex;
@@ -303,7 +292,7 @@ onUnmounted(() => {
   background-color: #f1f5f9;
 }
 
-/* Circular Icon Badge */
+/* Circular Icon Badge Design */
 .profile-image {
   width: 42px;
   height: 42px;
@@ -319,7 +308,7 @@ onUnmounted(() => {
   font-size: 1.25rem;
 }
 
-/* User Info Styling */
+/* User Info Styling Group */
 .profile-info {
   display: flex;
   flex-direction: column;
@@ -327,112 +316,11 @@ onUnmounted(() => {
 
 .profile-info strong {
   font-size: 0.95rem;
-  font-weight: 700;
   color: #1e293b;
-  line-height: 1.2;
 }
 
 .profile-info small {
   font-size: 0.8rem;
-  color: #94a3b8;
-  margin-top: 2px;
-}
-
-/* Dropdown Arrow */
-.dropdown-arrow {
-  font-size: 0.85rem;
-  color: #94a3b8;
-  margin-left: 6px;
-  transition: transform 0.2s ease;
-}
-
-.dropdown-arrow.rotated {
-  transform: rotate(180deg);
-}
-
-/* Floating Dropdown Card */
-.profile-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  right: 0;
-  background: #ffffff;
-  min-width: 190px;
-  border-radius: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-  border: 1px solid #f1f5f9;
-  padding: 10px 8px;
-  z-index: 100;
-}
-
-/* Items Inside Dropdown */
-.dropdown-item {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  width: 100%;
-  padding: 10px 14px;
-  background: none;
-  border: none;
-  text-align: left;
-  font-size: 0.92rem;
-  font-weight: 500;
-  color: #475569;
-  text-decoration: none;
-  cursor: pointer;
-  border-radius: 10px;
-  transition: background-color 0.15s ease, color 0.15s ease;
-}
-
-.dropdown-item i {
-  font-size: 1.15rem;
   color: #64748b;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dropdown-item:hover:not(.logout-btn) {
-  background-color: #f8fafc;
-  color: #1e293b;
-}
-
-.dropdown-item:hover:not(.logout-btn) i {
-  color: #2563eb;
-}
-
-.dropdown-divider {
-  margin: 6px 0;
-  border: 0;
-  border-top: 1px solid #f1f5f9;
-}
-
-/* Logout Item Styling */
-.logout-btn {
-  color: #ef4444;
-}
-
-.logout-btn i {
-  color: #ef4444;
-}
-
-.logout-btn:hover {
-  background-color: #fef2f2;
-  color: #dc2626;
-}
-
-.logout-btn:hover i {
-  color: #dc2626;
-}
-
-/* Vue Slide Transition */
-.slide-fade-enter-active,
-.slide-fade-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.slide-fade-enter-from,
-.slide-fade-leave-to {
-  transform: translateY(-6px);
-  opacity: 0;
 }
 </style>

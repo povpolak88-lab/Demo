@@ -29,8 +29,9 @@
         <table class="custom-table">
           <thead>
             <tr>
-              <th style="width: 70px;">No</th> <!-- Changed from ID to No -->
+              <th style="width: 70px;">No</th>
               <th>Student</th>
+              <th>Student ID</th> <!-- ប្តូរចំណងជើងពី Email មកជា ID វិញ ឬបន្ថែមតាមចិត្ត -->
               <th>Email</th>
               <th>Class</th>
               <th>Attendance</th>
@@ -38,11 +39,10 @@
             </tr>
           </thead>
           <tbody>
-            <tr v-for="student in filteredStudents" :key="student.id">
-              <!-- Custom designed to extract just the number from ST001 format -->
-              <td class="id-number-cell">
-                {{ student.id.replace(/^[A-Za-z]+0*/, '') }}
-              </td>
+            <tr v-for="(student, index) in filteredStudents" :key="student.id">
+              <!-- បង្ហាញលេខរៀងលំដាប់ (1, 2, 3...) -->
+              <td>{{ index + 1 }}</td>
+              
               <td>
                 <div class="student-cell">
                   <div class="student-avatar">
@@ -51,6 +51,12 @@
                   <strong>{{ student.name }}</strong>
                 </div>
               </td>
+              
+              <!-- បង្ហាញ ID ពេញទម្រង់ដូចក្នុង AttendanceStore (ឧទាហរណ៍៖ ST001) -->
+              <td class="id-number-cell">
+                {{ student.id }}
+              </td>
+              
               <td>{{ student.email }}</td>
               <td>{{ student.className }}</td>
               <td>
@@ -73,7 +79,7 @@
               </td>
             </tr>
             <tr v-if="filteredStudents.length === 0">
-              <td colspan="6" style="text-align: center; padding: 30px;">
+              <td colspan="7" style="text-align: center; padding: 30px;">
                 No students found.
               </td>
             </tr>
@@ -101,10 +107,10 @@
             <input v-model="formStudent.name" type="text" placeholder="Enter student name" required />
           </div>
 
-          <div class="form-group">
+          <form-group class="form-group">
             <label>Email</label>
             <input v-model="formStudent.email" type="email" placeholder="Enter email" required />
-          </div>
+          </form-group>
 
           <div class="form-group">
             <label>Class</label>
@@ -135,7 +141,6 @@
 import { ref, computed } from 'vue'
 import { useAttendanceStore } from '../Data/AttendanceStore'
 
-// Shared store — same data Attendance.vue writes to and Dashboard.vue reads from
 const store = useAttendanceStore()
 
 const search = ref('')
@@ -149,7 +154,6 @@ const formStudent = ref({
   className: ''
 })
 
-// Roster + live attendance % (computed from real records set on the Attendance page)
 const filteredStudents = computed(() => {
   const keyword = search.value.toLowerCase()
   return store.state.students
@@ -165,14 +169,12 @@ const filteredStudents = computed(() => {
     }))
 })
 
-// បើក Modal សម្រាប់ Add
 function openAddModal() {
   isEditMode.value = false
   formStudent.value = { name: '', email: '', className: '' }
   showModal.value = true
 }
 
-// បើក Modal សម្រាប់ Edit និងទាញទិន្នន័យចាស់មកបង្ហាញ
 function openEditModal(student: { id: string; name: string; email: string; className: string }) {
   currentStudentId.value = student.id
   formStudent.value = {
@@ -188,7 +190,6 @@ function closeModal() {
   showModal.value = false
 }
 
-// គ្រប់គ្រងការ Submit ទាំង Add និង Edit
 function handleSubmit() {
   if (isEditMode.value) {
     store.updateStudent(currentStudentId.value, { ...formStudent.value })
@@ -198,7 +199,6 @@ function handleSubmit() {
   closeModal()
 }
 
-// បានបំពេញបន្ថែមមុខងារ Delete ដែលដាច់ឱ្យបានពេញលេញ
 function deleteStudent(id: string) {
   if (confirm('Are you sure you want to delete this student?')) {
     store.deleteStudent(id)
@@ -270,40 +270,10 @@ function deleteStudent(id: string) {
   margin-top: 20px;
 }
 .cancel-btn {
-  border: 1px solid #ddd;
-  background: white;
-  padding: 9px 16px;
+  background: #f3f4f6;
+  border: none;
+  padding: 10px 16px;
   border-radius: 7px;
   cursor: pointer;
 }
-.primary-btn {
-  cursor: pointer;
-}
-.icon-action {
-  cursor: pointer;
-  border: none;
-  background: #f1f5f9;
-  padding: 6px 10px;
-  border-radius: 6px;
-  transition: all 0.2s;
-}
-.edit-btn:hover {
-  background: #e0f2fe;
-  color: #0284c7;
-}
-.delete-btn:hover {
-  background: #fee2e2;
-  color: #dc2626;
-}
-.badge-total {
-  background-color: #eff6ff;
-  color: #2563eb;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-weight: 600;
-  font-size: 12px;
-  display: inline-block;
-  margin-left: 4px;
-}
-
 </style>
