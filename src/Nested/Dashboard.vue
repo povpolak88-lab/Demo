@@ -3,7 +3,7 @@
     <!-- Welcome Section -->
     <div class="welcome-section">
       <div>
-        <h1>Good Morning, Admin!</h1>
+        <h1>Good Afternoon, Admin!</h1>
         <p>
           Welcome back to your Attendance Management System.
           Here's what's happening today.
