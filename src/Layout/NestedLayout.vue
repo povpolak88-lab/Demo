@@ -44,7 +44,10 @@
           <i class="bi bi-people-fill"></i>
           <span>Students</span>
         </router-link>
-
+        <router-link to="/class" class="menu-item">
+       <i class="bi bi-diagram-3-fill"></i>
+       <span>Class</span>
+        </router-link>
         <router-link to="/admin" class="menu-item">
           <i class="bi bi-person-gear"></i>
           <span>Admin</span>

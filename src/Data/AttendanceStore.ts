@@ -5,6 +5,7 @@ export interface Student {
   name: string
   email: string
   className: string
+  room?: string
 }
 
 export interface AttendanceRecord {

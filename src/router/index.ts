@@ -30,6 +30,11 @@ const router = createRouter({
           component: Dashboard
         },
         {
+          path: 'class',
+          name: 'class',
+          component: () => import('../Nested/Class.vue')
+        },
+        {
           path: 'admin',
           name: 'admin',
           component: Admin

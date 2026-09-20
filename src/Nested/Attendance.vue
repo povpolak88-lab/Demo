@@ -8,6 +8,7 @@
       </div>
     </Transition>
 
+    <!-- Page Heading -->
     <div class="page-heading">
       <div>
         <h1>Student Attendance</h1>
@@ -26,22 +27,35 @@
 
     <!-- Filters -->
     <div class="filter-card">
+      <!-- Date -->
       <div class="filter-group">
         <label>Date</label>
         <input v-model="date" type="date" />
       </div>
 
+      <!-- Class -->
       <div class="filter-group">
         <label>Class</label>
+
         <select v-model="selectedClass">
-          <option value="Class A">Class A</option>
-          <option value="Class B">Class B</option>
-          <option value="Class C">Class C</option>
+          <option value="Class A">
+            Class: A | Room: 305
+          </option>
+
+          <option value="Class B">
+            Class: B | Room: 204
+          </option>
+
+          <option value="Class C">
+            Class: C | Room: 105
+          </option>
         </select>
       </div>
 
+      <!-- Subject -->
       <div class="filter-group">
         <label>Subject</label>
+
         <select v-model="subject">
           <option>Web Development</option>
           <option>Database Management</option>
@@ -49,10 +63,13 @@
         </select>
       </div>
 
+      <!-- Search -->
       <div class="filter-group search-group">
         <label>Search Student</label>
+
         <div class="search-box">
           <i class="bi bi-search"></i>
+
           <input
             v-model="search"
             type="text"
@@ -69,16 +86,19 @@
         <span>Total</span>
         <strong>{{ filteredStudents.length }}</strong>
       </div>
+
       <div>
         <i class="bi bi-person-check-fill"></i>
         <span>Present</span>
         <strong>{{ presentCount }}</strong>
       </div>
+
       <div>
         <i class="bi bi-person-x-fill"></i>
         <span>Absent</span>
         <strong>{{ absentCount }}</strong>
       </div>
+
       <div>
         <i class="bi bi-clock-fill"></i>
         <span>Late</span>
@@ -91,9 +111,20 @@
       <div class="card-header-custom">
         <div>
           <h3>Attendance List</h3>
-          <p>{{ selectedClass }} • {{ subject }}</p>
+
+          <!-- Dynamic Room -->
+          <p>
+            {{ selectedClass }}
+            |
+            Room: {{ room }}
+            |
+            {{ subject }}
+          </p>
         </div>
-        <span class="date-label">{{ date }}</span>
+
+        <span class="date-label">
+          {{ date }}
+        </span>
       </div>
 
       <div class="table-responsive">
@@ -107,52 +138,86 @@
               <th>Time</th>
             </tr>
           </thead>
+
           <tbody>
-            <tr v-for="(student, index) in filteredStudents" :key="student.id">
-              <td>{{ index + 1 }}</td>
+            <tr
+              v-for="(student, index) in filteredStudents"
+              :key="student.id"
+            >
+              <td>
+                {{ index + 1 }}
+              </td>
+
               <td>
                 <div class="student-cell">
                   <div class="student-avatar">
                     {{ student.name.charAt(0) }}
                   </div>
-                  <strong>{{ student.name }}</strong>
+
+                  <strong>
+                    {{ student.name }}
+                  </strong>
                 </div>
               </td>
-              <td>{{ student.id }}</td>
+
+              <td>
+                {{ student.id }}
+              </td>
+
               <td>
                 <div class="attendance-buttons">
+                  <!-- Present -->
                   <button
                     :disabled="!canEdit"
-                    :class="{ selected: student.status === 'Present' }"
+                    :class="{
+                      selected: student.status === 'Present'
+                    }"
                     class="status-btn present-btn"
                     @click="setStatus(student, 'Present')"
                   >
-                    <i class="bi bi-check-lg"></i> Present
+                    <i class="bi bi-check-lg"></i>
+                    Present
                   </button>
 
+                  <!-- Late -->
                   <button
                     :disabled="!canEdit"
-                    :class="{ selected: student.status === 'Late' }"
+                    :class="{
+                      selected: student.status === 'Late'
+                    }"
                     class="status-btn late-btn"
                     @click="setStatus(student, 'Late')"
                   >
-                    <i class="bi bi-clock"></i> Late
+                    <i class="bi bi-clock"></i>
+                    Late
                   </button>
 
+                  <!-- Absent -->
                   <button
                     :disabled="!canEdit"
-                    :class="{ selected: student.status === 'Absent' }"
+                    :class="{
+                      selected: student.status === 'Absent'
+                    }"
                     class="status-btn absent-btn"
                     @click="setStatus(student, 'Absent')"
                   >
-                    <i class="bi bi-x-lg"></i> Absent
+                    <i class="bi bi-x-lg"></i>
+                    Absent
                   </button>
                 </div>
               </td>
-              <td>{{ student.time }}</td>
+
+              <td>
+                {{ student.time }}
+              </td>
             </tr>
+
+            <!-- No Students -->
             <tr v-if="filteredStudents.length === 0">
-              <td colspan="5" class="text-center py-4 text-muted">
+              <td
+                colspan="5"
+                class="text-center py-4 text-muted"
+              >
                 No students found.
               </td>
             </tr>
@@ -179,24 +244,70 @@ const currentUser = ref<User>({
   role: 'Teacher'
 })
 
-// Control visibility of the modern success toast
+// Success Toast
 const showSuccessToast = ref(false)
 
+// Permission
 const canEdit = computed(() => {
-  return currentUser.value.role === 'Admin' || currentUser.value.role === 'Teacher'
+  return (
+    currentUser.value.role === 'Admin' ||
+    currentUser.value.role === 'Teacher'
+  )
 })
 
+// Filters
 const date = ref(store.todayStr())
+
 const selectedClass = ref('Class A')
+
 const subject = ref('Web Development')
+
 const search = ref('')
 
+/*
+|--------------------------------------------------------------------------
+| Dynamic Room
+|--------------------------------------------------------------------------
+| Class A -> Room 305
+| Class B -> Room 204
+| Class C -> Room 105
+|--------------------------------------------------------------------------
+*/
+const room = computed(() => {
+  if (selectedClass.value === 'Class A') {
+    return '305'
+  }
+
+  if (selectedClass.value === 'Class B') {
+    return '204'
+  }
+
+  if (selectedClass.value === 'Class C') {
+    return '105'
+  }
+
+  return ''
+})
+
+// Filter Students
 const filteredStudents = computed(() => {
   return store.state.students
-    .filter(student => student.className === selectedClass.value)
-    .filter(student => student.name.toLowerCase().includes(search.value.toLowerCase()))
+    .filter(
+      student =>
+        student.className === selectedClass.value
+    )
+    .filter(
+      student =>
+        student.name
+          .toLowerCase()
+          .includes(search.value.toLowerCase())
+    )
     .map(student => {
-      const record = store.getAttendance(date.value, student.id)
+      const record = store.getAttendance(
+        date.value,
+        student.id
+      )
+
       return {
         id: student.id,
         name: student.name,
@@ -206,28 +317,62 @@ const filteredStudents = computed(() => {
     })
 })
 
-const presentCount = computed(() => filteredStudents.value.filter(s => s.status === 'Present').length)
-const absentCount = computed(() => filteredStudents.value.filter(s => s.status === 'Absent').length)
-const lateCount = computed(() => filteredStudents.value.filter(s => s.status === 'Late').length)
+// Present Count
+const presentCount = computed(() => {
+  return filteredStudents.value.filter(
+    student => student.status === 'Present'
+  ).length
+})
 
-function setStatus(student: { id: string }, status: 'Present' | 'Late' | 'Absent') {
+// Absent Count
+const absentCount = computed(() => {
+  return filteredStudents.value.filter(
+    student => student.status === 'Absent'
+  ).length
+})
+
+// Late Count
+const lateCount = computed(() => {
+  return filteredStudents.value.filter(
+    student => student.status === 'Late'
+  ).length
+})
+
+// Set Attendance Status
+function setStatus(
+  student: { id: string },
+  status: 'Present' | 'Late' | 'Absent'
+) {
   if (!canEdit.value) {
-    alert('You do not have permission to change attendance.')
+    alert(
+      'You do not have permission to change attendance.'
+    )
+
     return
   }
-  store.setAttendance(date.value, student.id, status, subject.value)
+
+  store.setAttendance(
+    date.value,
+    student.id,
+    status,
+    subject.value
+  )
 }
 
+// Save Attendance
 function saveAttendance() {
   if (!canEdit.value) {
-    alert('You do not have permission to save attendance.')
+    alert(
+      'You do not have permission to save attendance.'
+    )
+
     return
   }
 
-  // Trigger the customized toast banner
+  // Show success toast
   showSuccessToast.value = true
 
-  // Automatically hide the toast banner after 3 seconds
+  // Hide after 3 seconds
   setTimeout(() => {
     showSuccessToast.value = false
   }, 3000)
@@ -235,7 +380,7 @@ function saveAttendance() {
 </script>
 
 <style scoped>
-/* Scoped Styling for the Notification Toast */
+/* Success Toast */
 .success-toast {
   position: fixed;
   top: 20px;
@@ -257,10 +402,12 @@ function saveAttendance() {
   font-size: 1.2rem;
 }
 
-/* Vue Fade Transition Animation */
+/* Vue Fade Transition */
 .fade-enter-active,
 .fade-leave-active {
-  transition: opacity 0.3s ease, transform 0.3s ease;
+  transition:
+    opacity 0.3s ease,
+    transform 0.3s ease;
 }
 
 .fade-enter-from,

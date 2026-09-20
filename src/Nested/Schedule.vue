@@ -14,20 +14,20 @@
       </button>
     </div>
 
-    <!-- Major Filter -->
+    <!-- Class Filter -->
     <div class="filter-bar">
       <div class="filter-group">
-        <label>Major</label>
+        <label>Class Filter</label>
 
-        <select v-model="selectedMajor">
-          <option value="All">All Majors</option>
+        <select v-model="selectedClassFilter">
+          <option value="All">All Classes</option>
 
           <option
-            v-for="major in majors"
-            :key="major"
-            :value="major"
+            v-for="className in classNames"
+            :key="className"
+            :value="className"
           >
-            {{ major }}
+            {{ className }}
           </option>
         </select>
       </div>
@@ -86,7 +86,12 @@
 
             <span class="major">
               <i class="bi bi-mortarboard"></i>
-              {{ classItem.major }}
+              {{ classItem.className }}
+            </span>
+
+            <span v-if="classItem.teacher" class="teacher">
+              <i class="bi bi-person"></i>
+              {{ classItem.teacher }}
             </span>
 
             <span>
@@ -176,7 +181,7 @@
 
         <!-- Day -->
         <div class="form-group">
-          <label>Day</label>
+          <label>Day / Schedule Block</label>
 
           <select v-model="newSchedule.day">
             <option
@@ -190,23 +195,39 @@
         </div>
 
 
-        <!-- Major -->
-        <div class="form-group">
-          <label>Major</label>
+        <!-- Class (only relevant when type is 'Class') -->
+        <div class="form-group" v-if="newSchedule.type === 'Class'">
+          <label>Class</label>
 
-          <select v-model="newSchedule.major">
+          <select v-model="newSchedule.className">
             <option disabled value="">
-              Select major
+              Select class
             </option>
 
             <option
-              v-for="major in majors"
-              :key="major"
-              :value="major"
+              v-for="className in classNames"
+              :key="className"
+              :value="className"
             >
-              {{ major }}
+              {{ className }}
             </option>
           </select>
+
+          <small class="hint-text" v-if="newSchedule.className">
+            <i class="bi bi-lightning-charge-fill"></i>
+            Room, subject, and teacher auto-filled for {{ newSchedule.className }} — you can still edit them below.
+          </small>
+        </div>
+
+        <!-- Class Group (free text, used only for Study sessions) -->
+        <div class="form-group" v-else>
+          <label>Group / Class</label>
+
+          <input
+            v-model="newSchedule.className"
+            type="text"
+            placeholder="Example: Class A (optional)"
+          />
         </div>
 
 
@@ -224,6 +245,18 @@
                 ? 'Example: Database Revision'
                 : 'Example: Web Development'
             "
+          />
+        </div>
+
+
+        <!-- Teacher -->
+        <div class="form-group">
+          <label>Teacher</label>
+
+          <input
+            v-model="newSchedule.teacher"
+            type="text"
+            placeholder="Example: Chantha Mony"
           />
         </div>
 
@@ -259,7 +292,7 @@
           <input
             v-model="newSchedule.room"
             type="text"
-            placeholder="Room 301 / Library / Home"
+            placeholder="Room 305 / Library / Home"
           />
         </div>
 
@@ -331,8 +364,18 @@
             <i class="bi bi-mortarboard"></i>
 
             <div>
-              <small>Major</small>
-              <strong>{{ selectedClass.major }}</strong>
+              <small>Class</small>
+              <strong>{{ selectedClass.className || '—' }}</strong>
+            </div>
+          </div>
+
+
+          <div class="detail-item" v-if="selectedClass.teacher">
+            <i class="bi bi-person"></i>
+
+            <div>
+              <small>Teacher</small>
+              <strong>{{ selectedClass.teacher }}</strong>
             </div>
           </div>
 
@@ -341,7 +384,7 @@
             <i class="bi bi-calendar3"></i>
 
             <div>
-              <small>Day</small>
+              <small>Schedule Block</small>
               <strong>{{ selectedClass.day }}</strong>
             </div>
           </div>
@@ -389,9 +432,7 @@
 
 
 <script setup lang="ts">
-
-import { computed, ref } from 'vue'
-
+import { computed, ref, watch } from 'vue'
 
 /* =========================
    Types
@@ -402,7 +443,8 @@ interface ClassItem {
   subject: string
   time: string
   room: string
-  major: string
+  className: string
+  teacher: string
   type: 'Class' | 'Study'
   day: string
 }
@@ -412,420 +454,264 @@ interface ScheduleDay {
   classes: ClassItem[]
 }
 
-
 /* =========================
    Constants
 ========================= */
 
 const days = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday'
+  'Monday to Thursday',
+  'Saturday to Sunday',
+  
 ]
 
-const majors = [
-  'Programming Language',
-  'Computer Fundamentals',
-  'English for Computing',
-  'Centery Skill',
-  'Basic Electronics'
-]
+// Class names list
+const classNames = ['Class A', 'Class B', 'Class C']
 
-// One accent color per day, used to color-code each schedule card dynamically
+/*
+|--------------------------------------------------------------------------
+| Dynamic Class Info Map
+|--------------------------------------------------------------------------
+*/
+const classInfoMap: Record<string, { room: string; subject: string; teacher: string }> = {
+  'Class A': { room: 'Room 305', subject: 'Web Fronend Development', teacher: 'Chantha Mony' },
+  'Class B': { room: 'Room 204', subject: 'Database Management', teacher: 'Sokha Rith' },
+  'Class C': { room: 'Room 105', subject: 'Computer Network', teacher: 'Vannak Dara' }
+}
+
+function classRoom(className: string) {
+  return classInfoMap[className]?.room ?? ''
+}
+
+function classSubject(className: string) {
+  return classInfoMap[className]?.subject ?? ''
+}
+
+function classTeacher(className: string) {
+  return classInfoMap[className]?.teacher ?? ''
+}
+
+// Accent colors per card header
 const dayAccentMap: Record<string, string> = {
-  Monday: '#2563eb',
-  Tuesday: '#7c3aed',
-  Wednesday: '#0891b2',
+  'Monday to Thursday': '#2563eb',
+  'Saturday to Sunday': '#2563eb',
   Thursday: '#d97706',
   Friday: '#db2777',
-  Saturday: '#16a34a',
-  Sunday: '#64748b'
+  Saturday: '#16a34a'
 }
 
 function dayAccent(day: string) {
   return dayAccentMap[day] || '#2563eb'
 }
 
-
 /* =========================
-   Schedule Data
+   Schedule Data (Matches UI)
 ========================= */
 
 const schedules = ref<ScheduleDay[]>([
   {
-    day: 'Monday',
+    day: 'Monday to Thursday',
     classes: [
       {
         id: 1,
-        subject: 'Programming Language',
-        time: '07:30 AM - 09:00 AM',
-        room: 'Room 103',
-        major: 'Information Technology',
+        subject: classSubject('Class A'),
+        time: '02:00 PM - 03:30 PM',
+        room: classRoom('Class A'),
+        className: 'Class A',
+        teacher: classTeacher('Class A'),
         type: 'Class',
-        day: 'Monday'
-      },
-      {
-        id: 2,
-        subject: 'Computer Fundamentals',
-        time: '09:30 AM - 11:00 AM',
-        room: 'Room 104',
-        major: 'Information Technology',
-        type: 'Class',
-        day: 'Monday'
+        day: 'Monday to Thursday'
       }
     ]
   },
-
   {
-    day: 'Tuesday',
+    day: 'Monday to Thursday',
+    classes: [
+      {
+        id: 2,
+        subject: classSubject('Class B'),
+        time: '02:00 PM - 03:30 PM',
+        room: classRoom('Class B'),
+        className: 'Class B',
+        teacher: classTeacher('Class B'),
+        type: 'Class',
+        day: 'Monday to Thursday'
+      }
+    ]
+  },
+  {
+    day: 'Saturday to Sunday',
     classes: [
       {
         id: 3,
-        subject: 'Basic Electronics',
-        time: '07:30 AM - 09:00 AM',
-        room: 'Room 105',
-        major: 'Information Technology',
+        subject: classSubject('Class C'),
+        time: '02:00 PM - 05:00 PM',
+        room: classRoom('Class C'),
+        className: 'Class C',
+        teacher: classTeacher('Class C'),
         type: 'Class',
-        day: 'Tuesday'
-      },
-      {
-        id: 4,
-        subject: 'Programming Language',
-        time: '09:30 AM - 11:00 AM',
-        room: 'Room 103',
-        major: 'Information Technology',
-        type: 'Class',
-        day: 'Tuesday'
+        day: 'Saturday to Sunday'
       }
     ]
   },
-
   {
-    day: 'Wednesday',
-    classes: [
-      {
-        id: 5,
-        subject: 'Centery Skill',
-        time: '07:30 AM - 09:00 AM',
-        room: 'Room 102',
-        major: 'Information Technology',
-        type: 'Class',
-        day: 'Wednesday'
-      },
-      {
-        id: 6,
-        subject: 'Mathematics',
-        time: '09:30 AM - 11:00 AM',
-        room: 'Room 101',
-        major: 'Information Technology',
-        type: 'Class',
-        day: 'Wednesday'
-      }
-    ]
-  },
-
-  {
-    day: 'Thursday',
-    classes: [
-      {
-        id: 7,
-        subject: 'Programming Language',
-        time: '07:30 AM - 09:00 AM',
-        room: 'Room 103',
-        major: 'Information Technology',
-        type: 'Class',
-        day: 'Thursday'
-      },
-      {
-        id: 8,
-        subject: 'English for Computing',
-        time: '09:30 AM - 11:00 AM',
-        room: 'Room 106',
-        major: 'Information Technology',
-        type: 'Class',
-        day: 'Thursday'
-      }
-    ]
-  },
-
-  {
-    day: 'Friday',
-    classes: [
-      {
-        id: 9,
-        subject: 'Computer Fundamentals',
-        time: '07:30 AM - 09:00 AM',
-        room: 'Room 104',
-        major: 'Information Technology',
-        type: 'Class',
-        day: 'Friday'
-      },
-      {
-        id: 10,
-        subject: 'Centery Skill',
-        time: '09:30 AM - 11:00 AM',
-        room: 'Room 101',
-        major: 'Information Technology',
-        type: 'Class',
-        day: 'Friday'
-      }
-    ]
-  },
-
-  {
-    day: 'Saturday',
-    classes: [
-      {
-        id: 11,
-        subject: 'Mathematics',
-        time: '07:30 AM - 09:00 AM',
-        room: 'Room 103',
-        major: 'Information Technology',
-        type: 'Class',
-        day: 'Saturday'
-      },
-      {
-        id: 12,
-        subject: 'English for Computing',
-        time: '09:30 AM - 11:00 AM',
-        room: 'Room 106z',
-        major: 'Information Technology',
-        type: 'Class',
-        day: 'Saturday'
-      }
-    ]
-  },
-
-  {
-    day: 'Sunday',
+    day: 'Monday to Thursday',
     classes: []
-  }
+  },
+  {
+    day: 'Saturday to Sunday',
+    classes: []
+  },
 ])
-
 
 /* =========================
    Modal Controls
 ========================= */
 
 const showAddModal = ref(false)
-
 const selectedClass = ref<ClassItem | null>(null)
-
-const selectedMajor = ref('All')
-
+const selectedClassFilter = ref('All')
 
 /* =========================
-   New Schedule
+   New Schedule Input State
 ========================= */
 
 const newSchedule = ref({
   type: 'Class' as 'Class' | 'Study',
-  day: 'Monday',
-  major: '',
+  day: 'Monday to Thursday',
+  className: '',
   subject: '',
+  teacher: '',
   startTime: '',
   endTime: '',
   room: ''
 })
 
+/* =========================
+   Dynamic Auto-fill
+========================= */
+
+watch(
+  () => [newSchedule.value.className, newSchedule.value.type],
+  ([className, type]) => {
+    if (type === 'Class' && className && classInfoMap[className as string]) {
+      const info = classInfoMap[className as string]
+      newSchedule.value.room = info.room
+      newSchedule.value.subject = info.subject
+      newSchedule.value.teacher = info.teacher
+    }
+  }
+)
 
 /* =========================
-   Filtered Schedule
+   Filtered Schedule Computed
 ========================= */
 
 const filteredSchedules = computed(() => {
-
   return schedules.value.map(day => ({
     ...day,
-
     classes:
-      selectedMajor.value === 'All'
+      selectedClassFilter.value === 'All'
         ? day.classes
         : day.classes.filter(
-            item => item.major === selectedMajor.value
+            item => item.className === selectedClassFilter.value
           )
   }))
-
 })
 
-
 /* =========================
-   Reset Form
+   Reset Form Helper
 ========================= */
 
 function resetForm() {
-
   newSchedule.value = {
     type: 'Class',
-    day: 'Monday',
-    major: '',
+    day: 'Monday to Thursday',
+    className: '',
     subject: '',
+    teacher: '',
     startTime: '',
     endTime: '',
     room: ''
   }
-
 }
 
-
 /* =========================
-   Open Add Modal
+   Methods & Actions
 ========================= */
 
 function openAddModal() {
-
   resetForm()
-
   showAddModal.value = true
-
 }
-
-
-/* =========================
-   Open Add Modal For Day
-========================= */
 
 function openAddModalForDay(day: string) {
-
   resetForm()
-
   newSchedule.value.day = day
-
   showAddModal.value = true
-
 }
-
-
-/* =========================
-   Format Time
-========================= */
 
 function formatTime(time: string) {
-
   const [hours, minutes] = time.split(':')
-
   let hour = Number(hours)
-
   const ampm = hour >= 12 ? 'PM' : 'AM'
-
   hour = hour % 12 || 12
-
   return `${String(hour).padStart(2, '0')}:${minutes} ${ampm}`
-
 }
 
-
-/* =========================
-   Add Schedule
-========================= */
-
 function addSchedule() {
-
   if (
-    !newSchedule.value.major ||
     !newSchedule.value.subject ||
     !newSchedule.value.startTime ||
     !newSchedule.value.endTime ||
     !newSchedule.value.room
   ) {
-
-    alert('Please fill in all fields.')
-
+    alert('Please fill in all required fields.')
     return
-
   }
-
 
   if (newSchedule.value.startTime >= newSchedule.value.endTime) {
-
     alert('End time must be later than start time.')
-
     return
-
   }
-
 
   const selectedDay = schedules.value.find(
     item => item.day === newSchedule.value.day
   )
 
-
   const newClass: ClassItem = {
-
     id: Date.now(),
-
     subject: newSchedule.value.subject,
-
     time:
       `${formatTime(newSchedule.value.startTime)} - ` +
       `${formatTime(newSchedule.value.endTime)}`,
-
     room: newSchedule.value.room,
-
-    major: newSchedule.value.major,
-
+    className: newSchedule.value.className,
+    teacher: newSchedule.value.teacher,
     type: newSchedule.value.type,
-
     day: newSchedule.value.day
-
   }
-
 
   if (selectedDay) {
-
     selectedDay.classes.push(newClass)
-
   } else {
-
     schedules.value.push({
-
       day: newSchedule.value.day,
-
       classes: [newClass]
-
     })
-
   }
 
-
   showAddModal.value = false
-
 }
-
-
-/* =========================
-   View Schedule
-========================= */
 
 function viewClass(classItem: ClassItem) {
-
   selectedClass.value = classItem
-
 }
-
-
-/* =========================
-   Delete Schedule
-========================= */
 
 function deleteSchedule(dayName: string, classId: number) {
-
-  const day = schedules.value.find(
-    item => item.day === dayName
-  )
-
+  const day = schedules.value.find(item => item.day === dayName)
   if (!day) return
-
-  day.classes = day.classes.filter(
-    item => item.id !== classId
-  )
-
+  day.classes = day.classes.filter(item => item.id !== classId)
 }
-
 </script>
 
 
@@ -1057,6 +943,11 @@ function deleteSchedule(dayName: string, classId: number) {
   font-weight: 500;
 }
 
+.class-box .teacher {
+  color: #4b5563;
+  font-weight: 500;
+}
+
 
 /* =========================
    Type Chip
@@ -1228,6 +1119,15 @@ function deleteSchedule(dayName: string, classId: number) {
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
+.hint-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 7px;
+  color: #2563eb;
+  font-size: 12.5px;
+}
+
 
 /* =========================
    Type Buttons
@@ -1328,15 +1228,12 @@ function deleteSchedule(dayName: string, classId: number) {
 ========================= */
 
 @media (max-width: 1000px) {
-
   .schedule-grid {
     grid-template-columns: repeat(2, 1fr);
   }
-
 }
 
 @media (max-width: 650px) {
-
   .page-heading {
     flex-direction: column;
     align-items: flex-start;
@@ -1358,7 +1255,5 @@ function deleteSchedule(dayName: string, classId: number) {
   .time-row {
     grid-template-columns: 1fr;
   }
-
 }
-
 </style>

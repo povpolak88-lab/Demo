@@ -31,34 +31,34 @@
             <tr>
               <th style="width: 70px;">No</th>
               <th>Student</th>
-              <th>Student ID</th> <!-- ប្តូរចំណងជើងពី Email មកជា ID វិញ ឬបន្ថែមតាមចិត្ត -->
+              <th>Student ID</th>
               <th>Email</th>
               <th>Class</th>
+              <th>Room</th>
               <th>Attendance</th>
               <th>Action</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="(student, index) in filteredStudents" :key="student.id">
-              <!-- បង្ហាញលេខរៀងលំដាប់ (1, 2, 3...) -->
               <td>{{ index + 1 }}</td>
               
               <td>
                 <div class="student-cell">
                   <div class="student-avatar">
-                    {{ student.name.charAt(0) }}
+                    {{ (student.name || 'S').charAt(0) }}
                   </div>
                   <strong>{{ student.name }}</strong>
                 </div>
               </td>
               
-              <!-- បង្ហាញ ID ពេញទម្រង់ដូចក្នុង AttendanceStore (ឧទាហរណ៍៖ ST001) -->
               <td class="id-number-cell">
                 {{ student.id }}
               </td>
               
-              <td>{{ student.email }}</td>
+              <td>{{ student.email || '--' }}</td>
               <td>{{ student.className }}</td>
+              <td>{{ student.room || '--' }}</td>
               <td>
                 <span
                   class="attendance-status"
@@ -79,7 +79,7 @@
               </td>
             </tr>
             <tr v-if="filteredStudents.length === 0">
-              <td colspan="7" style="text-align: center; padding: 30px;">
+              <td colspan="8" style="text-align: center; padding: 30px;">
                 No students found.
               </td>
             </tr>
@@ -107,19 +107,24 @@
             <input v-model="formStudent.name" type="text" placeholder="Enter student name" required />
           </div>
 
-          <form-group class="form-group">
+          <div class="form-group">
             <label>Email</label>
             <input v-model="formStudent.email" type="email" placeholder="Enter email" required />
-          </form-group>
+          </div>
 
           <div class="form-group">
             <label>Class</label>
-            <select v-model="formStudent.className" required>
+            <select v-model="formStudent.className" @change="onClassChange" required>
               <option value="">Select class</option>
               <option value="Class A">Class A</option>
               <option value="Class B">Class B</option>
               <option value="Class C">Class C</option>
             </select>
+          </div>
+
+          <div class="form-group">
+            <label>Room</label>
+            <input v-model="formStudent.room" type="text" placeholder="e.g. 305" readonly />
           </div>
 
           <div class="modal-actions">
@@ -141,6 +146,21 @@
 import { ref, computed } from 'vue'
 import { useAttendanceStore } from '../Data/AttendanceStore'
 
+interface StudentData {
+  id?: string
+  name: string
+  email: string
+  className: string
+  room?: string
+}
+
+interface FormState {
+  name: string
+  email: string
+  className: string
+  room: string
+}
+
 const store = useAttendanceStore()
 
 const search = ref('')
@@ -148,39 +168,60 @@ const showModal = ref(false)
 const isEditMode = ref(false)
 const currentStudentId = ref('')
 
-const formStudent = ref({
+// Class to room mapping synchronized with Dashboard Schedule
+const classRoomMap: Record<string, string> = {
+  'Class A': '305',
+  'Class B': '204',
+  'Class C': '105'
+}
+
+const formStudent = ref<FormState>({
   name: '',
   email: '',
-  className: ''
+  className: '',
+  room: ''
 })
 
 const filteredStudents = computed(() => {
   const keyword = search.value.toLowerCase()
   return store.state.students
     .filter(student =>
-      student.name.toLowerCase().includes(keyword) ||
-      student.email.toLowerCase().includes(keyword) ||
-      student.id.toLowerCase().includes(keyword) ||
-      student.className.toLowerCase().includes(keyword)
+      (student.name || '').toLowerCase().includes(keyword) ||
+      (student.email || '').toLowerCase().includes(keyword) ||
+      (student.id || '').toLowerCase().includes(keyword) ||
+      (student.className || '').toLowerCase().includes(keyword) ||
+      (student.room || classRoomMap[student.className] || '').toLowerCase().includes(keyword)
     )
     .map(student => ({
       ...student,
-      attendance: store.getStudentAttendanceRate(student.id)
+      // Default to room mapping if room is missing on student record
+      room: student.room || classRoomMap[student.className] || '--',
+      attendance: typeof store.getStudentAttendanceRate === 'function' 
+        ? store.getStudentAttendanceRate(student.id) 
+        : 100
     }))
 })
 
+// Automatically assigns room matching the dashboard schedule on selection
+function onClassChange() {
+  formStudent.value.room = classRoomMap[formStudent.value.className] || ''
+}
+
 function openAddModal() {
   isEditMode.value = false
-  formStudent.value = { name: '', email: '', className: '' }
+  formStudent.value = { name: '', email: '', className: '', room: '' }
   showModal.value = true
 }
 
-function openEditModal(student: { id: string; name: string; email: string; className: string }) {
+function openEditModal(student: StudentData & { id: string }) {
   currentStudentId.value = student.id
+  const assignedRoom = student.room || classRoomMap[student.className] || ''
+  
   formStudent.value = {
-    name: student.name,
-    email: student.email,
-    className: student.className
+    name: student.name || '',
+    email: student.email || '',
+    className: student.className || '',
+    room: assignedRoom
   }
   isEditMode.value = true
   showModal.value = true
@@ -192,16 +233,22 @@ function closeModal() {
 
 function handleSubmit() {
   if (isEditMode.value) {
-    store.updateStudent(currentStudentId.value, { ...formStudent.value })
+    if (typeof store.updateStudent === 'function') {
+      store.updateStudent(currentStudentId.value, { ...formStudent.value })
+    }
   } else {
-    store.addStudent({ ...formStudent.value })
+    if (typeof store.addStudent === 'function') {
+      store.addStudent({ ...formStudent.value })
+    }
   }
   closeModal()
 }
 
 function deleteStudent(id: string) {
   if (confirm('Are you sure you want to delete this student?')) {
-    store.deleteStudent(id)
+    if (typeof store.deleteStudent === 'function') {
+      store.deleteStudent(id)
+    }
   }
 }
 </script>
@@ -258,10 +305,16 @@ function deleteStudent(id: string) {
   border: 1px solid #ddd;
   border-radius: 7px;
   outline: none;
+  box-sizing: border-box;
 }
 .form-group input:focus,
 .form-group select:focus {
   border-color: #2f8f7e;
+}
+.form-group input[readonly] {
+  background-color: #f8fafc;
+  color: #64748b;
+  cursor: not-allowed;
 }
 .modal-actions {
   display: flex;
